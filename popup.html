@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    /* Added max-height and overflow-y so you can scroll through all 10 videos! */
+    body { width: 300px; max-height: 500px; overflow-y: auto; font-family: Arial, sans-serif; padding: 10px; }
+    h3 { margin-top: 0; font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 5px;}
+    .video-item { margin-bottom: 12px; background: #f9f9f9; padding: 8px; border-radius: 4px; }
+    .title { font-weight: bold; font-size: 13px; color: #333; margin-bottom: 4px; }
+    .timestamp { font-size: 12px; color: #d32f2f; }
+    .date { font-size: 10px; color: #777; margin-top: 4px; }
+    #clear-btn { width: 100%; padding: 8px; margin-top: 10px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    #clear-btn:hover { background: #b71c1c; }
+  </style>
+</head>
+<body>
+  <h3>Last 10 Watched Lectures</h3>
+  <div id="history-list">Loading...</div>
+  
+  <button id="clear-btn">Clear History</button>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
