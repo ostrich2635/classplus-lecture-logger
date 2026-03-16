@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Classplus Lecture Logger",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Automatically tracks and resumes your watched lectures on Classplus.",
   "permissions": ["storage"],
   "host_permissions": [
