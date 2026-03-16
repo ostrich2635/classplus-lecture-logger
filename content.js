@@ -1,17 +1,21 @@
 let activeVideo = null;
 let activeTitle = "";
+let activeDuration = 0;
 let sessionStartTime = 0;
 let lastSaveTime = 0;
 
 function saveProgress(video, title) {
-    // HARD SHIELD: Prevents 00:00 overwrites on accidental clicks
     if (video.currentTime < 2 || isNaN(video.duration)) return;
 
     chrome.storage.local.get(['watchHistory'], function(result) {
         let history = result.watchHistory || [];
         
-        // Remove old entry for this exact title
-        history = history.filter(item => item.title !== title);
+        // THE FIX: Delete older saves by matching BOTH Title and Duration (+/- 2 seconds)
+        history = history.filter(item => {
+            const sameTitle = item.title === title;
+            const sameDuration = Math.abs(item.duration - video.duration) < 3;
+            return !(sameTitle && sameDuration);
+        });
         
         history.unshift({
             title: title,
@@ -27,9 +31,10 @@ function saveProgress(video, title) {
 
 function scanForVideo() {
     const videoElement = document.querySelector('video.vjs-tech');
-    if (!videoElement) return;
+    
+    // STRICT GATE: Wait until the video is fully loaded and has a valid length
+    if (!videoElement || isNaN(videoElement.duration) || videoElement.duration === 0) return;
 
-    // FIX 1: Use textContent to bypass React modal visibility blocking
     let currentTitle = "Classplus Lecture";
     const titleElement = document.querySelector('.courseHome_addContentHeading_2wZvq');
     
@@ -37,17 +42,21 @@ function scanForVideo() {
         currentTitle = titleElement.textContent.trim();
     }
 
-    // FIX 2: State Change Detection without paralyzed Strict Gates
-    if (videoElement !== activeVideo || (currentTitle !== activeTitle && currentTitle !== "Classplus Lecture")) {
+    // STATE CHANGE: Detect a new video using the DOM element AND its unique duration
+    if (videoElement !== activeVideo || Math.abs(videoElement.duration - activeDuration) > 2) {
         activeVideo = videoElement;
         activeTitle = currentTitle;
+        activeDuration = videoElement.duration;
         sessionStartTime = Date.now();
         lastSaveTime = Date.now();
 
-        // 3. Jump Logic (The Enforcer)
         chrome.storage.local.get(['watchHistory'], function(result) {
             const history = result.watchHistory || [];
-            const savedData = history.find(item => item.title === activeTitle);
+            
+            // THE FIX: Find the correct timestamp using the Dual Fingerprint
+            const savedData = history.find(item => 
+                item.title === activeTitle && Math.abs(item.duration - activeVideo.duration) < 3
+            );
 
             if (savedData && savedData.time > 2 && savedData.time < (savedData.duration * 0.95)) {
                 let attempts = 0;
@@ -56,19 +65,16 @@ function scanForVideo() {
                     attempts++;
                     if (!activeVideo) return;
                     
-                    // Check if jump succeeded (within 3 seconds margin)
                     if (Math.abs(activeVideo.currentTime - savedData.time) < 3) {
                         activeVideo.removeEventListener('timeupdate', enforceJump);
                         return;
                     }
                     
-                    // Failsafe: Release the video after 30 attempts
                     if (attempts > 30) {
                         activeVideo.removeEventListener('timeupdate', enforceJump);
                         return;
                     }
 
-                    // Force the time jump when the video engine is ready
                     if (activeVideo.readyState >= 1) {
                         activeVideo.currentTime = savedData.time;
                     }
@@ -78,9 +84,7 @@ function scanForVideo() {
             }
         });
 
-        // 4. Time Tracking
         const trackProgress = () => {
-            // SPA Cleanup: Detach if React loaded a new video element
             if (activeVideo !== videoElement) {
                 videoElement.removeEventListener('timeupdate', trackProgress);
                 return;
@@ -88,7 +92,6 @@ function scanForVideo() {
 
             const now = Date.now();
             
-            // Apply the 3.7 second grace period before allowing saves
             if (now - sessionStartTime > 3700) {
                 if (now - lastSaveTime > 3700) {
                     saveProgress(activeVideo, activeTitle);
@@ -101,5 +104,4 @@ function scanForVideo() {
     }
 }
 
-// Check every 1 second
 setInterval(scanForVideo, 1000);
